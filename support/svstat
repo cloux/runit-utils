@@ -1,0 +1,9 @@
+#!/bin/sh
+# wrapper around runit 'sv status' command
+# (cloux@rote.ch)
+
+if [ $# -eq 0 ]; then
+	sv status /etc/service/*
+else
+	sv status $@
+fi

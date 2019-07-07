@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# runit service activation
+# (cloux@rote.ch)
+
+# We need to be root
+if [ $(id -u) -ne 0 ]; then printf '%s: Need to be root!\n' "$0"; exit 1; fi
+
+if [ $# -eq 0 ]; then
+	printf 'Enter runit service names as parameters.\n'
+	printf 'Supported services are listed in /etc/sv/\n'
+	exit
+fi
+
+# process all services provided as command line parameters
+RET=0
+for SRV in "$@"; do
+	SRVNAME=${SRV##*/}
+	if [ -d "/etc/service/$SRVNAME" ]; then
+		printf '%s: runit service "%s" is already active\n' "${0##*/}" "$SRVNAME"
+		continue
+	fi
+	if [ ! -d "/etc/sv/$SRVNAME" ]; then
+		printf '%s: runit service definition "/etc/sv/%s" not found, activation failed\n' "${0##*/}" "$SRVNAME"
+		RET=1
+		continue
+	fi
+	ln -s "/etc/sv/$SRVNAME" /etc/service/ 2>/dev/null
+	if [ $? -eq 0 ]; then
+		# wait for runsv to become available
+		COUNT=0
+		while ! sv status $SRVNAME >/dev/null; do
+			sleep 0.2
+			COUNT=$((COUNT+1))
+			if [ "$COUNT" -gt 30 ]; then
+				printf '%s: runsv for runit service "%s" failed to start\n' "${0##*/}" "$SRVNAME"
+				RET=1
+				break
+			fi
+		done
+	else
+		printf '%s: runit service "%s" activation failed\n' "${0##*/}" "$SRVNAME"
+		RET=1
+	fi
+done
+
+exit $RET

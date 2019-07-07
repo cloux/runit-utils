@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Some scripts (deb installer, acpi poweroff, etc.) might
+# require working pidof, which is available only for sysvinit.
+# This is a pidof-compatibile script for runit-init.
+# see: http://man7.org/linux/man-pages/man1/pidof.1.html
+#
+# (cloux@rote.ch)
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+RET=1
+while getopts ':scxo:' OPT 2>/dev/null; do
+	case $OPT in
+		s) SINGLE=yes ;;
+		o) OMIT="$OMIT $OPTARG " ;;
+		c | x | *) ;;
+	esac
+done
+shift "$(($OPTIND - 1))"
+for SRV in $*; do
+	REALPATH="$(readlink -fn "$(command -v "$SRV")")"
+	[ -f "$REALPATH" ] || continue
+	for PID in $(pgrep -f -d ' ' "$REALPATH"); do
+		if printf '%s\n' "$OMIT" | grep -vq " $PID "; then
+			printf '%s\n' "$PID"
+			[ "$SINGLE" ] && exit
+			RET=0
+		fi
+	done
+done
+exit $RET

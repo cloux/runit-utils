@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# update-rc.d.runit - Emulate System-V init script links management for runit
+#
+# (cloux@rote.ch)
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+# We need to be root
+if [ $(id -u) -ne 0 ]; then printf '%s: Need to be root!\n' "$0"; exit 1; fi
+
+# parse parameters
+for PARAM in $@; do
+	case $PARAM in
+		-*) continue ;;
+	esac
+	if [ -z "$SRV" ]; then
+		SRV=$PARAM
+	elif [ -z "$ACTION" ]; then
+		ACTION=$PARAM
+		break
+	fi
+done
+if [ -z "$SRV" ] || [ -z "$ACTION" ]; then
+	printf '%s warning: missing parameters.\n' "${0##*/}"
+	exit 0
+fi
+
+# if runit supervisor is not running, fallback to sysvinit
+if [ -z "$(pgrep runsvdir)" ]; then
+	[ -x /usr/sbin/update-rc.d.sysv ] && \
+	[ "$(head -c 2 /etc/init.d/$SRV 2>/dev/null)" = '#!' ] && \
+	  /usr/sbin/update-rc.d.sysv $@
+	exit 0
+fi
+
+if [ "$ACTION" = "remove" ]; then
+	# delete all rc*.d service symlinks, stop supervision
+	insserv -r $SRV 2>&1
+else
+	# start supervision
+	insserv $SRV 2>&1
+fi
+
+exit 0

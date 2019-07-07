@@ -1,0 +1,25 @@
+#!/bin/sh
+# nfsmount calls this script when mounting a filesystem with locking
+# enabled, but when statd does not seem to be running.
+# It should run statd with whatever flags are apropriate for this
+# site.
+PATH="/sbin:/usr/sbin:/bin:/usr/bin"
+
+# Use flock to serialize the running of this script
+exec 9> /var/run/rpc.statd.lock
+flock -e 9
+
+# exit if statd is already running
+pgrep -x rpc.statd >/dev/null && exit
+
+if [ "$(pgrep -x runsvdir)" ]; then
+	# try runit supervisor if it's active
+	sv start rpc.statd
+elif [ -d /run/systemd/system ]; then
+	# try systemd if it's installed
+	systemctl start rpc-statd.service
+else
+	# Fall back to launching it ourselves.
+	cd /
+	exec rpc.statd --no-notify
+fi

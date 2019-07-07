@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# runit-init compatible shutdown
+# (cloux@rote.ch)
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+# check root access
+if [ $(id -u) -ne 0 ]; then printf 'Need to be root!\n'; exit 1; fi
+
+# check PID1
+if grep -vq runit /proc/1/cmdline; then
+	printf 'ERROR: runit is not PID1, shutdown failed.\n'
+	exit 1
+fi
+
+# we check for these files in stage 3 to go for halt or reboot
+install --mode=755 /dev/null /run/runit.stopit
+rm -f /run/runit.reboot /run/runit.kexecreboot
+
+# print warning to all terminals
+printf '\nSystem is going down...\n' | wall --nobanner
+
+# find runit-init binary
+RUNIT_INIT=$(grep -o 'init=[^ ]*' /proc/cmdline | grep -o '[^=]*$')
+[ "$RUNIT_INIT" ] || RUNIT_INIT=/sbin/init
+# proceed with shutdown
+$RUNIT_INIT 0
+
+# Don't give the terminal back immediately, the user should not be doing
+# anything more, just wait for the reboot. If the machine is not rebooted
+# after 15 seconds, probably something went wrong, give the terminal back.
+# Ctrl+C gives the terminal back immediately.
+sleep 15

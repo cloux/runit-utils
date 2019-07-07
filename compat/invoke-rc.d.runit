@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+# invoke-rc.d.runit - Executes initscript actions for runit
+#
+# Forgiving behaviour: return success exit code even on failures
+# to prevent dpkg installation errors. This seems to have better
+# compatibility with sysvinit and no negative impact in most use cases.
+#
+# (cloux@rote.ch)
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+# We need to be root
+if [ $(id -u) -ne 0 ]; then printf '%s: Need to be root!\n' "$0"; exit 1; fi
+
+# if runit supervisor is not running, fallback to sysvinit
+if [ -z "$(pgrep runsvdir)" ]; then
+	[ -x /usr/sbin/invoke-rc.d.sysv ] && /usr/sbin/invoke-rc.d.sysv $@
+	exit 0
+fi
+
+# parse parameters
+for PARAM in $@; do
+	case $PARAM in
+		--help) printf '%s: Execute runscript actions for runit supervisor\n' "${0##*/}"; exit ;;
+		--query) exit 100 ;;
+		-*) continue ;;
+	esac
+	if [ -z "$SRV" ]; then
+		SRV=$PARAM
+	elif [ -z "$ACTION" ]; then
+		ACTION=$PARAM
+		break
+	fi
+done
+
+if [ -z "$SRV" ] || [ -z "$ACTION" ]; then
+	printf '%s warning: missing parameters.\n' "${0##*/}"
+	exit 0
+fi
+
+# manage service
+if [ -d "/etc/service/$SRV" ]; then
+	# runit service is supervised/active
+	case "$ACTION" in
+		*start)
+			# start supervised service, if not disabled by "down"
+			if [ -f "/etc/service/$SRV/down" ]; then
+				printf '%s: %s service is disabled (down), %s omitted\n' "${0##*/}" "$SRV" "$ACTION"
+			else
+				sv "$ACTION" "$SRV"
+			fi
+			;;
+		*stop)
+			# stop service and disable supervision,
+			# this is required for 'dpkg --remove' compatibility
+			svdeactivate "$SRV"
+			;;
+		*) 
+			sv "$ACTION" "$SRV"
+			;;
+	esac
+elif [ -d "/etc/sv/$SRV" ]; then
+	# runit service is unsupervised/deactivated
+	case "$ACTION" in
+		*start)
+			# activate service, if it's not disabled by "down"
+			if [ -f "/etc/sv/$SRV/down" ]; then
+				printf '%s: %s service is disabled (down), %s omitted\n' "${0##*/}" "$SRV" "$ACTION"
+			else
+				svactivate "$SRV" && sv "$ACTION" "$SRV"
+			fi
+			;;
+		*stop)
+			# attempt to stop deactivated service (no-op)
+			printf '%s: %s service is already deactivated\n' "${0##*/}" "$SRV"
+			;;
+		*)
+			# other actions on inactive service
+			printf '%s: action "%s" is not available for deactivated service %s\n' \
+			"${0##*/}" "$ACTION" "$SRV"
+			;;
+	esac
+elif [ -x "/etc/init.d/$SRV" ]; then
+	# fallback to sysvinit
+	/etc/init.d/$SRV $ACTION
+else
+	printf '%s: unknown service "%s"\n' "${0##*/}" "$SRV"
+fi
+
+# on stop, put back the sysvinit init.d file. dpkg might want to remove it
+if [ "$ACTION" = "stop" ]; then
+	[ -L "/etc/init.d/$SRV" ] && rm "/etc/init.d/$SRV" 2>/dev/null
+	mv -f /etc/init.d/$SRV.sysv /etc/init.d/$SRV 2>/dev/null
+fi
+
+exit 0

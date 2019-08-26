@@ -39,6 +39,12 @@ if [ -z "$SRV" ] || [ -z "$ACTION" ]; then
 	exit 0
 fi
 
+# status should be run directly and return with error on failure
+if [ "$ACTION" = "status" ]; then
+	sv status $SRV
+	exit
+fi
+
 # manage service
 if [ -d "/etc/service/$SRV" ]; then
 	# runit service is supervised/active

@@ -17,7 +17,7 @@ if [ "$(pgrep runsvdir)" ]; then
 	shift "$((OPTIND-1))"
 	for SRV in $*; do
 		SRVNAME=$(printf '%s' "$SRV" | grep -o '^[^,]*')
-		[ "$SRVNAME" ] || continue
+		[ -d "/etc/sv/$SRVNAME" ] || continue
 		if [ "$REMOVE" ]; then
 			svdeactivate "$SRVNAME" >/dev/null
 			# mark service as "down" to prevent autostart
@@ -26,7 +26,7 @@ if [ "$(pgrep runsvdir)" ]; then
 			mv -f /etc/init.d/$SRVNAME.sysv /etc/init.d/$SRVNAME 2>/dev/null
 			# delete rc.d symlinks
 			find /etc/rc?.d -type l -iname '*'$SRVNAME -delete
-		elif [ -d "/etc/sv/$SRVNAME" ]; then
+		else
 			rm -f "/etc/sv/$SRVNAME/down"
 			svactivate "$SRVNAME"
 		fi

@@ -19,16 +19,17 @@ if [ "$(pgrep runsvdir)" ]; then
 		SRVNAME=$(printf '%s' "$SRV" | grep -o '^[^,]*')
 		[ -d "/etc/sv/$SRVNAME" ] || continue
 		if [ "$REMOVE" ]; then
-			svdeactivate "$SRVNAME" >/dev/null
-			# mark service as "down" to prevent autostart
-			touch "/etc/sv/$SRVNAME/down" 2>/dev/null
+			# stop service and disable supervision,
+			# this is required for 'dpkg --remove' compatibility
+			sv stop "$SRVNAME" >/dev/null
+			rm -f "/etc/service/$SRVNAME"
 			# put back the original init-file, dpkg might want to remove it
 			mv -f /etc/init.d/$SRVNAME.sysv /etc/init.d/$SRVNAME 2>/dev/null
 			# delete rc.d symlinks
 			find /etc/rc?.d -type l -iname '*'$SRVNAME -delete
 		else
-			rm -f "/etc/sv/$SRVNAME/down"
-			svactivate "$SRVNAME"
+			# only enable service if it was not manually disabled before
+			[ -f "/etc/sv/$SRVNAME/disabled" ] || svactivate "$SRVNAME"
 		fi
 	done
 else

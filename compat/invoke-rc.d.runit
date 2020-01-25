@@ -50,17 +50,14 @@ if [ -d "/etc/service/$SRV" ]; then
 	# runit service is supervised/active
 	case "$ACTION" in
 		*start)
-			# start supervised service, if not disabled by "down"
-			if [ -f "/etc/service/$SRV/down" ]; then
-				printf '%s: %s service is disabled (down), %s omitted\n' "${0##*/}" "$SRV" "$ACTION"
-			else
-				sv "$ACTION" "$SRV"
-			fi
+			# start supervised service
+			sv "$ACTION" "$SRV"
 			;;
 		*stop)
 			# stop service and disable supervision,
 			# this is required for 'dpkg --remove' compatibility
-			svdeactivate "$SRV"
+			sv stop "$SRV" >/dev/null
+			rm -f "/etc/service/$SRV"
 			;;
 		*) 
 			sv "$ACTION" "$SRV"
@@ -70,9 +67,9 @@ elif [ -d "/etc/sv/$SRV" ]; then
 	# runit service is unsupervised/deactivated
 	case "$ACTION" in
 		*start)
-			# activate service, if it's not disabled by "down"
-			if [ -f "/etc/sv/$SRV/down" ]; then
-				printf '%s: %s service is disabled (down), %s omitted\n' "${0##*/}" "$SRV" "$ACTION"
+			# activate service, if it's not manually disabled
+			if [ -f "/etc/sv/$SRV/disabled" ]; then
+				printf '%s: %s service is disabled, %s omitted\n' "${0##*/}" "$SRV" "$ACTION"
 			else
 				svactivate "$SRV" && sv "$ACTION" "$SRV"
 			fi

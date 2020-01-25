@@ -25,6 +25,9 @@ for SRV in "$@"; do
 		RET=1
 		continue
 	fi
+	# mark service as enabled
+	rm -f "/etc/sv/$SRVNAME/disabled"
+	# enable service supervision
 	ln -s "/etc/sv/$SRVNAME" /etc/service/ 2>/dev/null
 	if [ $? -eq 0 ]; then
 		# wait for runsv to become available

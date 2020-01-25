@@ -16,10 +16,14 @@ fi
 for SRV in "$@"; do
 	SRVNAME=${SRV##*/}
 	if [ -d "/etc/service/$SRVNAME" ]; then
+		# stop service
 		sv stop $SRVNAME >/dev/null
+		# stop runsv supervisor
 		rm -f "/etc/service/$SRVNAME"
+		# mark service as manually disabled
+		touch "/etc/sv/$SRVNAME/disabled"
 	elif [ -d "/etc/sv/$SRVNAME" ]; then
-		printf '%s: runit service "%s" is already inactive\n' "${0##*/}" "$SRVNAME"
+		printf '%s: runit service "%s" is already deactivated\n' "${0##*/}" "$SRVNAME"
 	else
 		printf '%s: runit service definition "/etc/sv/%s" is missing\n' "${0##*/}" "$SRVNAME"
 	fi

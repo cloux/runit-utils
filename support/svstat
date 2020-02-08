@@ -2,8 +2,9 @@
 # wrapper around runit 'sv status' command
 # (cloux@rote.ch)
 
+cd /etc/service/
 if [ $# -eq 0 ]; then
-	sv status /etc/service/*
+	sv status *
 else
 	sv status $@
 fi

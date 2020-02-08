@@ -13,7 +13,7 @@ Runit-utils are installed automatically as a part of runit-init system by the [s
 sin runit-init
 ```
 
-To install manually, copy the files to the appropriate locations:
+To install manually without [sin](https://github.com/cloux/sin), copy the files to the appropriate locations:
 
 ```
 git clone https://github.com/cloux/runit-utils
@@ -47,8 +47,9 @@ The [support scripts](https://github.com/cloux/runit-utils/tree/master/support) 
 	 - Syntax: `svactivate SERVICE [SERVICE ...]` where SERVICE is any directory in _/etc/sv/_
  * svdeactivate - stop services and disable supervision
 	 - Syntax: `svdeactivate SERVICE [SERVICE ...]` where SERVICE is any directory in _/etc/service/_
- * svstat - show status of specific or all supervised services
+ * svstat - show status of supervised services
 	 - Equivalent to `sv status SERVICE` or `sv status /etc/service/*` when run without parameter
+	 - Glob matching works if escaped: `svstat a\* '*s'` returns all services whose names start with 'a' and also services whose names ends with 's' (acpid, agetty-1, dbus). 
 
 ---
 <a href="http://www.wtfpl.net"><img src="http://www.wtfpl.net/wp-content/uploads/2012/12/wtfpl-badge-2.png" align="right"></a>

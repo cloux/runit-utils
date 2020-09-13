@@ -35,7 +35,7 @@ for SRV in "$@"; do
 		while ! sv status $SRVNAME >/dev/null; do
 			sleep 0.2
 			COUNT=$((COUNT+1))
-			if [ "$COUNT" -gt 30 ]; then
+			if [ "$COUNT" -gt 40 ]; then
 				printf '%s: runsv for runit service "%s" failed to start\n' "${0##*/}" "$SRVNAME"
 				RET=1
 				break

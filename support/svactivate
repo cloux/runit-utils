@@ -28,8 +28,7 @@ for SRV in "$@"; do
 	# mark service as enabled
 	rm -f "/etc/sv/$SRVNAME/disabled"
 	# remove supervise symlinks
-	[ -h "/etc/sv/$SRVNAME/supervise" ] && rm "/etc/sv/$SRVNAME/supervise"
-	[ -h "/etc/sv/$SRVNAME/log/supervise" ] && rm "/etc/sv/$SRVNAME/log/supervise"
+	find "/etc/sv/$SRVNAME/" -type l -name supervise -delete
 	# enable service supervision
 	ln -s "/etc/sv/$SRVNAME" /etc/service/ 2>/dev/null
 	if [ $? -eq 0 ]; then
